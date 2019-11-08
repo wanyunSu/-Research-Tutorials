@@ -18,11 +18,13 @@ using namespace std;
 void drawTChain(){
 
 TCanvas* c1 = new TCanvas("c1","c1",600,400);
-TFile *f = new TFile("/eos/user/w/wasu/AQT_dijet_data_bdt/dijet_data_bdt.root","recreate");
+TFile *f = new TFile("../dijet_sherpa_bdt_d.root","recreate");
+//TFile *f = new TFile("/eos/user/w/wasu/AQT_dijet_data_bdt/dijet_data_bdt.root","recreate");
 
 TChain* fChain = new TChain("AntiKt4EMPFlow_dijet_insitu");
 
-string root_lists = "/eos/user/w/wasu/AQT_dijet_sherpa_bdt/dijet_data_bdt.txt";
+string root_lists = "/eos/user/w/wasu/AQT_dijet_sherpa_bdt/dijet_sherpa_bdt_d.txt";
+//string root_lists = "/eos/user/w/wasu/AQT_dijet_data_bdt/dijet_data_bdt.txt";
 string sLine="";
 ifstream infile;
 infile.open(root_lists.c_str());//Data());
@@ -31,7 +33,7 @@ while(!infile.eof())
 	getline(infile,sLine);
 	fChain->Add(sLine.c_str());
 }
-infile.close();
+//infile.close();
 
 
 UInt_t mcChannelNumber; 
@@ -52,6 +54,10 @@ Float_t weight_pileup;
 Float_t pdfWeights[101];
 Float_t j2_bdt_resp;
 Float_t j1_bdt_resp;
+Float_t j1_trackWidth;
+Float_t j2_trackWidth;
+Float_t j1_trackC1;
+Float_t j2_trackC1;
 Int_t j1_NumTrkPt500;
 Int_t j2_NumTrkPt500;
 Int_t j1_partonLabel;
@@ -79,6 +85,10 @@ fChain->SetBranchStatus("weight_pileup",1);
 fChain->SetBranchStatus("pdfWeights",1);
 fChain->SetBranchStatus("j1_NumTrkPt500",1);
 fChain->SetBranchStatus("j2_NumTrkPt500",1);
+fChain->SetBranchStatus("j1_trackWidth",1);
+fChain->SetBranchStatus("j2_trackWidth",1);
+fChain->SetBranchStatus("j1_trackC1",1);
+fChain->SetBranchStatus("j2_trackC1",1);
 fChain->SetBranchStatus("j1_bdt_resp",1);
 fChain->SetBranchStatus("j2_bdt_resp",1);
 fChain->SetBranchStatus("j1_partonLabel",1);
@@ -94,4 +104,5 @@ t2->CopyEntries(fChain);
 t2->Print();
 f->Write();
 f->Close();
+infile.close();
 }
