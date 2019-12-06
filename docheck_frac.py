@@ -7,7 +7,7 @@ doreweight = 0
 var = "BDT"
 mc = "sherpa_d_SF"
 
-def myText(x,y,text, color = 1):
+def myText(x,y,text, color = 1):  #use ATLAS Latex style when plotting
 	l = TLatex()
 	l.SetTextSize(0.025)
 	l.SetNDC()
@@ -15,16 +15,15 @@ def myText(x,y,text, color = 1):
 	l.DrawLatex(x,y,text)
 	pass
 
-bin = [0, 50, 100, 150, 200, 300, 400, 500, 600, 800, 1000, 1200, 1500, 2000]
-for i in range(7,13):
+ntrackall = TFile("dijet_sherpa_d_py.root")  #read Monte Carlo inputs
+ntrackall3 = TFile("dijet_data_d_py.root")  #read data inputs to compare with Monte Carlo
+bin = [0, 50, 100, 150, 200, 300, 400, 500, 600, 800, 1000, 1200, 1500, 2000]  #define bin ranger
+for i in range(7,13): #start from pT>500 GeV ,see the ReadingTree.py for more details
 #for i in range(13):
 		min = bin[i]
 		max = bin[i+1]
 
-
-		ntrackall = TFile("dijet_sherpa_d_py.root")
-		ntrackall3 = TFile("dijet_data_d_py.root")
-
+		#get the histograms from the inputs root files
 		higher_quark = ntrackall.Get(str(min)+"_LeadingJet_Forward_Quark_bdt")
 		higher_quark2 = ntrackall.Get(str(min)+"_SubJet_Forward_Quark_bdt")
 		higher_gluon = ntrackall.Get(str(min)+"_LeadingJet_Forward_Gluon_bdt")
@@ -38,6 +37,7 @@ for i in range(7,13):
 		higher_data2 = ntrackall3.Get(str(min)+"_SubJet_Forward_Data_bdt")
 		lower_data = ntrackall3.Get(str(min)+"_LeadingJet_Central_Data_bdt")
 		lower_data2 = ntrackall3.Get(str(min)+"_SubJet_Central_Data_bdt")
+		#add leading jet and sub-leading jet together, what we want to calculate is the higher/lower eta jet, no matter it comes from leading or sub-leading jet
 		higher_data.Add(higher_data2)
 		lower_data.Add(lower_data2)
 		higher_quark.Add(higher_quark2)
@@ -51,6 +51,7 @@ for i in range(7,13):
 		ToT_Cq2 =0.
 		ToT_Cg2 = 0.
 
+	#get the higher/lower, quark/gluon fractions (fg:fraction of higher gluon, cg:fraction of lower gluon) in each pT range.
 		for j in range(1,lower_quark.GetNbinsX()+1):
 			ToT_Fq2+=higher_quark.GetBinContent(j)
 			ToT_Cq2+=lower_quark.GetBinContent(j)
@@ -65,7 +66,7 @@ for i in range(7,13):
 
 
 		c = TCanvas("c","c",500,500)
-		if (doreweight):
+		if (doreweight):   #This process decide if we want to re-weight shape of the lower jets in order to match that of the higher jets. This process correct the detector effect which causes the difference between the shape of higher and lower eta jets.
 			for i in range(1,higher_quark.GetNbinsX()+1):
 				if (lower_quark.GetBinContent(i) > 0 and lower_gluon.GetBinContent(i) > 0):
 					#print i,higher_quark.GetBinContent(i)/lower_quark.GetBinContent(i),higher_gluon.GetBinContent(i)/lower_gluon.GetBinContent(i)
@@ -79,6 +80,7 @@ for i in range(7,13):
 			pass
 		 
 
+		#Normalize the distribution to one, in order to compare the shape, not the absolute value.
 		if (lower_quark.Integral() != 0):
 			lower_quark.Scale(1./lower_quark.Integral())
 		if(lower_gluon.Integral() != 0):
@@ -109,7 +111,7 @@ for i in range(7,13):
 		quark_data = higher_data.Clone("")
 		gluon_data = higher_data.Clone("")
 
-
+		#Matrix Method 
 		for i in range(1,higher.GetNbinsX()+1):
 			F = higher.GetBinContent(i)
 			C = lower.GetBinContent(i)
@@ -143,7 +145,8 @@ for i in range(7,13):
 		gPad.SetLeftMargin(0.15)
 		gPad.SetTopMargin(0.05)
 		gPad.SetBottomMargin(0.15)
-
+		
+		#draw the ratio plots for MC closure and Scale factor
 		quark_ratio = quark_data.Clone("")
 		#quark_ratio = quark.Clone("") 
 		#quark_ratio = higher_quark.Clone("") 
@@ -152,8 +155,9 @@ for i in range(7,13):
 		#gluon_ratio = higher_gluon.Clone("") 
 		gluon_ratio.Divide(gluon)
 
+
+		#below are the ploting style
 		gStyle.SetOptStat(0)
-		######################## for ratio plot
 		c.Divide(2,1)
 
 		top = c.cd(1)
