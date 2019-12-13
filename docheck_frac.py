@@ -2,12 +2,13 @@ from ROOT import *
 #import numpy as np
 
 
-doreweight = 0 
+doreweight = 0   #decide if we want to do the reweighting process
 
-var = "BDT"
-mc = "sherpa_d_SF"
+var = "BDT"  #change the var name according to the inputvar you want to read
+mc = "sherpa_MC"   #by setting it as "SF" or "MC", it will automatically making scale factor plots or MC closure plots
+inputvar = "bdt"  #by setting it as bdt (or ntrk,width,c1..), it will read the corresponding histogram, but remember to change the TLine range according to X-axis of different variable, one can check it by browsing the histograms in root file.
 
-def myText(x,y,text, color = 1):  #use ATLAS Latex style when plotting
+def myText(x,y,text, color = 1):
 	l = TLatex()
 	l.SetTextSize(0.025)
 	l.SetNDC()
@@ -15,29 +16,33 @@ def myText(x,y,text, color = 1):  #use ATLAS Latex style when plotting
 	l.DrawLatex(x,y,text)
 	pass
 
-ntrackall = TFile("dijet_sherpa_d_py.root")  #read Monte Carlo inputs
-ntrackall3 = TFile("dijet_data_d_py.root")  #read data inputs to compare with Monte Carlo
-bin = [0, 50, 100, 150, 200, 300, 400, 500, 600, 800, 1000, 1200, 1500, 2000]  #define bin ranger
-for i in range(7,13): #start from pT>500 GeV ,see the ReadingTree.py for more details
-#for i in range(13):
+bin = [0, 50, 100, 150, 200, 300, 400, 500, 600, 800, 1000, 1200, 1500, 2000]
+
+ntrackall = TFile("dijet_sherpa_py.root")
+ntrackall3 = TFile("dijet_data_py.root")
+
+for i in range(7,13):   #for only dijet event, start from jet pT>500 GeV
+#for i in range(13):	#for gamma+jet combined with dijet event, start from jet pT>0 GeV
 		min = bin[i]
 		max = bin[i+1]
 
-		#get the histograms from the inputs root files
-		higher_quark = ntrackall.Get(str(min)+"_LeadingJet_Forward_Quark_bdt")
-		higher_quark2 = ntrackall.Get(str(min)+"_SubJet_Forward_Quark_bdt")
-		higher_gluon = ntrackall.Get(str(min)+"_LeadingJet_Forward_Gluon_bdt")
-		higher_gluon2 = ntrackall.Get(str(min)+"_SubJet_Forward_Gluon_bdt")
-		lower_quark = ntrackall.Get(str(min)+"_LeadingJet_Central_Quark_bdt")
-		lower_quark2 = ntrackall.Get(str(min)+"_SubJet_Central_Quark_bdt")
-		lower_gluon = ntrackall.Get(str(min)+"_LeadingJet_Central_Gluon_bdt")
-		lower_gluon2 = ntrackall.Get(str(min)+"_SubJet_Central_Gluon_bdt")
+		higher_quark = ntrackall.Get(str(min)+"_LeadingJet_Forward_Quark_"+inputvar)
+		higher_quark2 = ntrackall.Get(str(min)+"_SubJet_Forward_Quark_"+inputvar)
+		higher_gluon = ntrackall.Get(str(min)+"_LeadingJet_Forward_Gluon_"+inputvar)
+		higher_gluon2 = ntrackall.Get(str(min)+"_SubJet_Forward_Gluon_"+inputvar)
+		lower_quark = ntrackall.Get(str(min)+"_LeadingJet_Central_Quark_"+inputvar)
+		lower_quark2 = ntrackall.Get(str(min)+"_SubJet_Central_Quark_"+inputvar)
+		lower_gluon = ntrackall.Get(str(min)+"_LeadingJet_Central_Gluon_"+inputvar)
+		lower_gluon2 = ntrackall.Get(str(min)+"_SubJet_Central_Gluon_"+inputvar)
 
-		higher_data = ntrackall3.Get(str(min)+"_LeadingJet_Forward_Data_bdt")
-		higher_data2 = ntrackall3.Get(str(min)+"_SubJet_Forward_Data_bdt")
-		lower_data = ntrackall3.Get(str(min)+"_LeadingJet_Central_Data_bdt")
-		lower_data2 = ntrackall3.Get(str(min)+"_SubJet_Central_Data_bdt")
-		#add leading jet and sub-leading jet together, what we want to calculate is the higher/lower eta jet, no matter it comes from leading or sub-leading jet
+		higher_data = ntrackall3.Get(str(min)+"_LeadingJet_Forward_Data_"+inputvar)
+		higher_data2 = ntrackall3.Get(str(min)+"_SubJet_Forward_Data_"+inputvar)
+		lower_data = ntrackall3.Get(str(min)+"_LeadingJet_Central_Data_"+inputvar)
+		lower_data2 = ntrackall3.Get(str(min)+"_SubJet_Central_Data_"+inputvar)
+
+
+		#add leading and subleading jet from only dijet event together,
+		#note that for gammajet+dijet event, we need to add leading jet from gammajet and leading jet from dijet sample together
 		higher_data.Add(higher_data2)
 		lower_data.Add(lower_data2)
 		higher_quark.Add(higher_quark2)
@@ -51,36 +56,34 @@ for i in range(7,13): #start from pT>500 GeV ,see the ReadingTree.py for more de
 		ToT_Cq2 =0.
 		ToT_Cg2 = 0.
 
-	#get the higher/lower, quark/gluon fractions (fg:fraction of higher gluon, cg:fraction of lower gluon) in each pT range.
 		for j in range(1,lower_quark.GetNbinsX()+1):
 			ToT_Fq2+=higher_quark.GetBinContent(j)
 			ToT_Cq2+=lower_quark.GetBinContent(j)
 			ToT_Fg2+=higher_gluon.GetBinContent(j)
 			ToT_Cg2+=lower_gluon.GetBinContent(j)
 
+		# calculate the fraction of forward(higher) / central(lower) quark or gluon jet
 		fg=ToT_Fg2/(ToT_Fg2+ToT_Fq2)
 		cg=ToT_Cg2/(ToT_Cq2+ToT_Cg2)
 		fq=1.-fg
 		cq=1.-cg
 
 
-
 		c = TCanvas("c","c",500,500)
-		if (doreweight):   #This process decide if we want to re-weight shape of the lower jets in order to match that of the higher jets. This process correct the detector effect which causes the difference between the shape of higher and lower eta jets.
+		if (doreweight):
 			for i in range(1,higher_quark.GetNbinsX()+1):
 				if (lower_quark.GetBinContent(i) > 0 and lower_gluon.GetBinContent(i) > 0):
 					#print i,higher_quark.GetBinContent(i)/lower_quark.GetBinContent(i),higher_gluon.GetBinContent(i)/lower_gluon.GetBinContent(i)
 					factor_gluon = higher_gluon.GetBinContent(i)/lower_gluon.GetBinContent(i)
 					factor_quark = higher_quark.GetBinContent(i)/lower_quark.GetBinContent(i)
-					lower_quark.SetBinContent(i,lower_quark.GetBinContent(i)*factor_gluon)
-					lower_gluon.SetBinContent(i,lower_gluon.GetBinContent(i)*factor_gluon)
-					lower_data.SetBinContent(i,lower_data.GetBinContent(i)*factor_gluon)
+					lower_quark.SetBinContent(i,lower_quark.GetBinContent(i)*factor_quark)
+					lower_gluon.SetBinContent(i,lower_gluon.GetBinContent(i)*factor_quark)
+					lower_data.SetBinContent(i,lower_data.GetBinContent(i)*factor_quark)
 					pass
 				pass
 			pass
 		 
 
-		#Normalize the distribution to one, in order to compare the shape, not the absolute value.
 		if (lower_quark.Integral() != 0):
 			lower_quark.Scale(1./lower_quark.Integral())
 		if(lower_gluon.Integral() != 0):
@@ -111,7 +114,7 @@ for i in range(7,13): #start from pT>500 GeV ,see the ReadingTree.py for more de
 		quark_data = higher_data.Clone("")
 		gluon_data = higher_data.Clone("")
 
-		#Matrix Method 
+		#Matrix method here
 		for i in range(1,higher.GetNbinsX()+1):
 			F = higher.GetBinContent(i)
 			C = lower.GetBinContent(i)
@@ -142,22 +145,28 @@ for i in range(7,13): #start from pT>500 GeV ,see the ReadingTree.py for more de
 			pass
 
 
+		## below just do the ploting 
+
 		gPad.SetLeftMargin(0.15)
 		gPad.SetTopMargin(0.05)
 		gPad.SetBottomMargin(0.15)
-		
-		#draw the ratio plots for MC closure and Scale factor
-		quark_ratio = quark_data.Clone("")
-		#quark_ratio = quark.Clone("") 
-		#quark_ratio = higher_quark.Clone("") 
+
+		if "SF" in mc:
+			quark_ratio = quark_data.Clone("")
+			gluon_ratio = gluon_data.Clone("") 
+			quark_ratio.GetYaxis().SetTitle("Data/MC") #Data/MC
+			gluon_ratio.GetYaxis().SetTitle("Data/MC") #Data/MC
+		if "MC" in mc:
+			quark_ratio = higher_quark.Clone("") 
+			gluon_ratio = higher_gluon.Clone("") 
+			quark_ratio.GetYaxis().SetTitle("MC Closure") #Data/MC
+			gluon_ratio.GetYaxis().SetTitle("MC Closure") #Data/MC
+
 		quark_ratio.Divide(quark)
-		gluon_ratio = gluon_data.Clone("") 
-		#gluon_ratio = higher_gluon.Clone("") 
 		gluon_ratio.Divide(gluon)
 
-
-		#below are the ploting style
 		gStyle.SetOptStat(0)
+		######################## for ratio plot
 		c.Divide(2,1)
 
 		top = c.cd(1)
@@ -169,7 +178,7 @@ for i in range(7,13): #start from pT>500 GeV ,see the ReadingTree.py for more de
 		top.SetTicky(1)
 		top.SetLeftMargin(0.14)
 		top.SetRightMargin(0.055)
-		top.SetBottomMargin(0.25)
+		top.SetBottomMargin(0.3)#0.25
 		top.SetFrameBorderMode(0)
 		#top.SetLogy(1)
 
@@ -191,6 +200,7 @@ for i in range(7,13): #start from pT>500 GeV ,see the ReadingTree.py for more de
 		quark.GetYaxis().SetTitle("Normalized to unity")
 		quark.GetYaxis().SetNdivisions(505)
 		quark.GetYaxis().SetRangeUser(-0.01,quark.GetMaximum()*1.5)
+		#quark.GetYaxis().SetRangeUser(-0.01,0.05)
 		quark.SetMarkerColor(8)
 		quark.SetLineColor(8)
 		quark.SetMarkerSize(0.5) 
@@ -215,7 +225,6 @@ for i in range(7,13): #start from pT>500 GeV ,see the ReadingTree.py for more de
 
 		quark_ratio.SetTitle("")
 		quark_ratio.GetYaxis().SetRangeUser(0.7,1.3)
-		quark_ratio.GetYaxis().SetTitle("Data/MC") #Data/MC
 		quark_ratio.GetXaxis().SetTitle(var)
 		quark_ratio.GetXaxis().SetTitleOffset(1)
 		quark_ratio.GetXaxis().SetTitleSize(0.11)
@@ -230,8 +239,10 @@ for i in range(7,13): #start from pT>500 GeV ,see the ReadingTree.py for more de
 		top.cd()
 		quark.Draw()
 #		lower1.Draw("same")
-		quark_data.Draw("same")
-#		higher_quark.Draw()
+		if "SF" in mc:
+			quark_data.Draw("same")
+		if "MC" in mc:
+			higher_quark.Draw("same")
 #		lower_quark.Draw("same")
 		#higher_data.Draw("same")
 		#lower_data.Draw("same")
@@ -242,22 +253,25 @@ for i in range(7,13): #start from pT>500 GeV ,see the ReadingTree.py for more de
 		leg.SetBorderSize(0)
 		leg.SetFillStyle(0)
 		leg.SetNColumns(1)
-		leg.AddEntry(quark_data,"Extracted quark (data)","p")
 		leg.AddEntry(quark,"Extracted quark (mc)","p")
-		#leg.AddEntry(higher_quark,"higher quark (mc)","p")
+		if "SF" in mc:
+			myText(0.18,0.84,"#it{#bf{#scale[1.8]{#bf{ATLAS} Internal}}}")
+			leg.AddEntry(quark_data,"Extracted quark (data)","p")
+		if "MC" in mc:
+			leg.AddEntry(higher_quark,"higher quark (mc)","p")
+			myText(0.18,0.84,"#it{#bf{#scale[1.8]{#bf{ATLAS} Simulation Internal}}}")
 		#leg.AddEntry(lower_quark,"lower quark (mc)","p")
 		#leg.AddEntry(higher1,"higher (mc)","p")
 		#leg.AddEntry(lower1,"lower (mc)","p")
 		leg.Draw()
 
-		myText(0.18,0.84,"#it{#bf{#scale[1.8]{#bf{ATLAS} Internal}}}")
-		#myText(0.18,0.84,"#it{#bf{#scale[1.8]{#bf{ATLAS} Simulation Internal}}}")
 		myText(0.18,0.80,"#bf{#scale[1.5]{#sqrt{s} = 13 TeV}}")
 		myText(0.18,0.75,"#bf{#scale[1.5]{pT range: "+str(min)+" - "+str(max)+" GeV}}")
 
 
 		#line = TLine(0.,1,60,1)
 		line = TLine(-0.8,1,0.7,1)
+		#line = TLine(0.,1,0.4,1)
 
 		bot.cd()
 		quark_ratio.Draw()
@@ -272,6 +286,7 @@ for i in range(7,13): #start from pT>500 GeV ,see the ReadingTree.py for more de
 		gluon.GetXaxis().SetTitle(var)
 		gluon.GetYaxis().SetTitle("Normalized to unity")
 		gluon.GetYaxis().SetNdivisions(505)
+		#gluon.GetYaxis().SetRangeUser(-0.01,0.05)
 		gluon.GetYaxis().SetRangeUser(-0.01,gluon.GetMaximum()*1.5)
 		gluon.SetMarkerColor(8)
 		gluon.SetLineColor(8)
@@ -296,7 +311,6 @@ for i in range(7,13): #start from pT>500 GeV ,see the ReadingTree.py for more de
 
 		gluon_ratio.SetTitle("")
 		gluon_ratio.GetYaxis().SetRangeUser(0.7,1.3)
-		gluon_ratio.GetYaxis().SetTitle("Data/MC") #Data/MC
 		gluon_ratio.GetXaxis().SetTitle(var)
 		gluon_ratio.GetXaxis().SetTitleOffset(1)
 		gluon_ratio.GetXaxis().SetTitleSize(0.11)
@@ -310,32 +324,39 @@ for i in range(7,13): #start from pT>500 GeV ,see the ReadingTree.py for more de
 
 		top.cd()
 		gluon.Draw()
-		gluon_data.Draw("same")
-		#higher_gluon.Draw()
+		if "SF" in mc:
+			gluon_data.Draw("same")
+		if "MC" in mc:
+			higher_gluon.Draw("same")
 		#lower_gluon.Draw("same")
 		#higher_data.Draw("same")
 		#lower_data.Draw("same")
 
+		#leg = TLegend(0.3,0.4,0.6,0.6) 
+		#leg = TLegend(0.6,0.5,0.9,0.7) ##0.6,0.5,0.9,0.7
 		leg = TLegend(0.2,0.5,0.5,0.7) ##0.6,0.5,0.9,0.7
 		leg.SetTextFont(42)
 		leg.SetFillColor(0)
 		leg.SetBorderSize(0)
 		leg.SetFillStyle(0)
 		leg.SetNColumns(1)
-		leg.AddEntry(gluon_data,"Extracted gluon (data)","p")
 		leg.AddEntry(gluon,"Extracted gluon (mc)","p")
-		#leg.AddEntry(higher_gluon,"higher gluon (mc)","p")
+		if "SF" in mc:
+			leg.AddEntry(gluon_data,"Extracted gluon (data)","p")
+			myText(0.18,0.84,"#it{#bf{#scale[1.8]{#bf{ATLAS} Internal}}}")
+		if "MC" in mc:
+			myText(0.18,0.84,"#it{#bf{#scale[1.8]{#bf{ATLAS} Simulation Internal}}}")
+			leg.AddEntry(higher_gluon,"higher gluon (mc)","p")
 		#leg.AddEntry(lower_gluon,"lower gluon (mc)","p")
 		leg.Draw()
 
-		myText(0.18,0.84,"#it{#bf{#scale[1.8]{#bf{ATLAS} Internal}}}")
-		#myText(0.18,0.84,"#it{#bf{#scale[1.8]{#bf{ATLAS} Simulation Internal}}}")
 		myText(0.18,0.80,"#bf{#scale[1.5]{#sqrt{s} = 13 TeV}}")
 		myText(0.18,0.75,"#bf{#scale[1.5]{pT range: "+str(min)+" - "+str(max)+" GeV}}")
 
 
 		#line = TLine(0.,1,60,1)
 		line = TLine(-0.8,1,0.7,1)
+		#line = TLine(0.,1,0.4,1)
 
 		bot.cd()
 		gluon_ratio.Draw()

@@ -10,8 +10,8 @@ from ROOT import *
 #
 
 
-bins = [300, 400, 500, 600, 800, 1000, 1200, 1500, 2000]
-#bins = [0, 50, 100, 150, 200, 300, 400, 500, 600, 800, 1000, 1200, 1500, 2000]
+bins = [300, 400, 500, 600, 800, 1000, 1200, 1500, 2000]  #this bin range is for only dijet event
+#bins = [0, 50, 100, 150, 200, 300, 400, 500, 600, 800, 1000, 1200, 1500, 2000]  #this bin range is for gammajet+dijet event
 HistMap = {}
 JetList = []
 
@@ -25,6 +25,10 @@ def GetHistBin(histname):
 		return 60,0,60
 	elif 'bdt' in histname:
 		return 60,-0.8,0.7
+	elif 'width' in histname:
+		return 60,0.,0.4
+	elif 'c1' in histname:
+		return 60,0.,0.4
 
 def FillTH1F(histname, var, w):
 	if 'Data' in histname:
@@ -38,10 +42,12 @@ def FillTH1F(histname, var, w):
 
 
 def FillHisto(prefix, jetlist, w):
-	if jetlist[0] > 0:
-		FillTH1F(prefix+"_ntrk", jetlist[0], w)
-	if jetlist[1] > -99:
-		FillTH1F(prefix+"_bdt", jetlist[1], w)
+	FillTH1F(prefix+"_ntrk", jetlist[0], w)
+	FillTH1F(prefix+"_bdt", jetlist[1], w)
+	FillTH1F(prefix+"_width", jetlist[2], w)
+	FillTH1F(prefix+"_c1", jetlist[3], w)
+	FillTH1F(prefix+"_pt", jetlist[4], w)
+	FillTH1F(prefix+"_eta", jetlist[5], w)
 
 
 def GetJetType(label):
@@ -65,16 +71,17 @@ def FindBinIndex(jet_pt,ptbin):
 
 
 ######## read and excute TTree from root file 
-finput = TFile.Open("../dijet_sherpa_bdt_d.root")
+#finput = TFile.Open("/eos/user/w/wasu/AQT_dijet_sherpa_bdt/dijet_sherpa_bdt_d.root")
+finput = TFile.Open("/eos/user/w/wasu/AQT_dijet_data_bdt/dijet_data_bdt.root")
 t1 = finput.Get("AntiKt4EMPFlow_dijet_insitu")
 
-a = 0
 for i in t1:
 	if i.pass_HLT_j400 == 1 :#and i.j1_is_truth_jet and i.j2_is_truth_jet:
 		if i.j1_pT > 500 and i.j1_pT < 2000 and abs(i.j1_eta) < 2.1 and abs(i.j2_eta) < 2.1 and i.j1_pT/i.j2_pT < 1.5:
-			a += 1
-			pTbin = FindBinIndex(i.j1_pT, bins)
-			JetList = [[i.j1_NumTrkPt500, i.j1_bdt_resp],[i.j2_NumTrkPt500,i.j2_bdt_resp]] # JetList[0] for 1st jet, JetList[1] for 2nd jet
+			pTbin1 = FindBinIndex(i.j1_pT, bins)
+			pTbin2 = FindBinIndex(i.j2_pT, bins)
+
+			JetList = [[i.j1_NumTrkPt500, i.j1_bdt_resp, i.j1_trackWidth, i.j1_trackC1, i.j1_pT, i.j1_eta],[i.j2_NumTrkPt500,i.j2_bdt_resp, i.j2_trackWidth, i.j2_trackC1, i.j2_pT, i.j2_eta]] # JetList[0] for 1st jet, JetList[1] for 2nd jet
 
 			label1 = GetJetType(i.j1_partonLabel)
 			label2 = GetJetType(i.j2_partonLabel)
@@ -86,12 +93,12 @@ for i in t1:
 				eta2 = "Central"
 
 			weight_all = i.weight*i.weight_ptslice*i.pdfWeights[0]  #i.pdfWeights[0] is nominal
-			FillHisto(str(pTbin)+"_LeadingJet_"+eta1+"_"+label1, JetList[0], weight_all)
-			FillHisto(str(pTbin)+"_SubJet_"+eta2+"_"+label2, JetList[1], weight_all)
+			FillHisto(str(pTbin1)+"_LeadingJet_"+eta1+"_"+label1, JetList[0], weight_all)
+			FillHisto(str(pTbin2)+"_SubJet_"+eta2+"_"+label2, JetList[1], weight_all)
 
-print a
 
-foutput = TFile("test.root","recreate")
+foutput = TFile("dijet_data_py.root","recreate")
+#foutput = TFile("dijet_sherpa_py.root","recreate")
 for hist in HistMap.values():
 	#for i in range(len(bins)):
 		#if str(bins[i]) in HistMap.keys():
